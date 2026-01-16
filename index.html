@@ -70,6 +70,31 @@
         .stats-grid {
             display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 15px;
         }
+.speedometer{
+  position: fixed;
+  color: #000;
+  bottom: 20px;
+  left: 20px;
+  width: 90px;
+  height: 90px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.speed{
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.unit{
+  font-size: 14px;
+  color: gray;
+}
 
         .card {
             background: var(--card-bg); padding: 15px; border-radius: 10px;
@@ -114,7 +139,10 @@
             <button class="btn-primary" onclick="handleLogin()">Login Securely</button>
         </div>
     </div>
-
+<div class="speedometer">
+  <div class="speed" id="speed">0</div>
+  <div class="unit">km/h</div>
+</div>
     <div id="dashboard">
         <header>
             <div class="user-info">
@@ -197,6 +225,31 @@
                 });
             }
         }
+if ("geolocation" in navigator) {
+  navigator.geolocation.watchPosition(
+    (position) => {
+      let speed = position.coords.speed; // meters per second
+
+      if (speed === null) speed = 0;
+
+      // Convert m/s to km/h
+      let speedKmh = (speed * 3.6).toFixed(0);
+
+      document.getElementById("speed").innerText = speedKmh;
+    },
+    (error) => {
+      console.error(error);
+      alert("Please enable GPS & location permission");
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 5000
+    }
+  );
+} else {
+  alert("Geolocation not supported in this browser.");
+}
 
         function updateLocation(position) {
             const lat = position.coords.latitude;
@@ -232,43 +285,43 @@
             document.getElementById('connect-modal').style.display = 'none';
         }
 
-        async function connectDevice(type) {
-            closeModal();
-            const statusEl = document.getElementById('connection-status');
+        // async function connectDevice(type) {
+        //     closeModal();
+        //     const statusEl = document.getElementById('connection-status');
             
-            if (type === 'bluetooth') {
-                try {
-                    // REAL WEB BLUETOOTH API CALL (Commented out for safety/demo)
+        //     if (type === 'bluetooth') {
+        //         try {
+        //             // REAL WEB BLUETOOTH API CALL (Commented out for safety/demo)
                     
-                    const device = await navigator.bluetooth.requestDevice({
-                        acceptAllDevices: true,
-                        optionalServices: ['battery_service'] // Add your custom UUIDs here
-                    });
-                    await device.gatt.connect();
+        //             const device = await navigator.bluetooth.requestDevice({
+        //                 acceptAllDevices: true,
+        //                 optionalServices: ['battery_service'] // Add your custom UUIDs here
+        //             });
+        //             await device.gatt.connect();
                     
                     
-                    alert("Scanning for Bluetooth devices... (Simulation Mode Active)");
-                    statusEl.innerText = "BT Connected";
-                    statusEl.classList.add('active');
-                    isConnected = true;
+        //             alert("Scanning for Bluetooth devices... (Simulation Mode Active)");
+        //             statusEl.innerText = "BT Connected";
+        //             statusEl.classList.add('active');
+        //             isConnected = true;
 
-                } catch (error) {
-                    alert("Bluetooth Error: " + error);
-                }
-            } else {
-                let ip = prompt("Enter Device IP Address (e.g., 192.168.4.1):");
-                if (ip) {
-                    statusEl.innerText = "WiFi Connected";
-                    statusEl.classList.add('active');
-                    isConnected = true;
+        //         } catch (error) {
+        //             alert("Bluetooth Error: " + error);
+        //         }
+        //     } else {
+        //         let ip = prompt("Enter Device IP Address (e.g., 192.168.4.1):");
+        //         if (ip) {
+        //             statusEl.innerText = "WiFi Connected";
+        //             statusEl.classList.add('active');
+        //             isConnected = true;
 
-                }
-            }
-        }
+        //         }
+        //     }
+        // }
 function setDisconnected() {
             isConnected = false;
 
-            document.getElementByid("connection-status").innerText = "Disconnected";
+            document.getElementById("connection-status").innerText = "Disconnected";
 
             document.getElementById("connection-status").classList.remove("active");
 
@@ -343,32 +396,7 @@ async function fetchESP32Data() {
   document.getElementById("aqi-display").innerText = data.aqi;
   document.getElementById("drowsy-status").innerText = data.sleep ? "Sleepy" : "Awake";
 }
-
-        // --- DATA HANDLING (SIMULATION) ---
-        // Replace this function with real parsing logic for your sensors
-        
-            // setInterval(() => {
-            //     // Heart Rate (Random between 70-100)
-            //     const bpm = Math.floor(Math.random() * (100 - 70 + 1) + 70);
-            //     document.getElementById('bpm-display').innerText = bpm;
-
-            //     // Air Quality (Random)
-            //     const aqi = Math.floor(Math.random() * 50 + 20);
-            //     document.getElementById('aqi-display').innerText = aqi;
-
-            //     // Random Pothole Detection (1% chance every second)
-            //     if(Math.random() > 0.99) {
-            //         markPothole();
-            //     }
-                
-            //     // Random Drowsiness Simulation (For testing speaker)
-            //     // In reality, this comes from your eye-blink sensor logic
-            //     if(Math.random() > 0.98) {
-            //         triggerDrowsinessAlert();
-            //     }
-
-            // }, 2000);
-        
+     
 function connectDevice(type) {
   closeModal();
 
@@ -380,8 +408,8 @@ function connectDevice(type) {
 }
 
         
-      function setConnected(text) {
-  isConnected = true;
+    function setConnected(text) {
+     isConnected = true;
   const statusEl = document.getElementById("connection-status");
   statusEl.innerText = text;
   statusEl.classList.add("active");
