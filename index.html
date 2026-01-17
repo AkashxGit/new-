@@ -115,6 +115,29 @@
             background: rgba(0,0,0,0.8); z-index: 2000;
             justify-content: center; align-items: center;
         }
+        .mic-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 26px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  z-index: 3000;
+  transition: 0.3s;
+}
+
+.mic-btn.listening {
+  background: #ff0000;
+  animation: pulse 1.5s infinite;
+}
 
         .modal-content {
             background: var(--card-bg); padding: 20px; border-radius: 10px; width: 80%;
@@ -143,6 +166,9 @@
 <div class="speedometer">
   <div class="speed" id="speed">0</div>
   <div class="unit">km/h</div>
+</div>
+<div class="mic-btn" id="micBtn" onclick="toggleMic()">
+  <i class="fas fa-microphone"></i>
 </div>
     <div id="dashboard">
         <header>
@@ -276,6 +302,71 @@ if ("geolocation" in navigator) {
                 alert("Please enter a username");
             }
         }
+let recognition;
+let isListening = false;
+let helpCount = 0;
+
+function toggleMic() {
+  if (isListening) {
+    stopMic();
+  } else {
+    startMic();
+  }
+}
+
+function startMic() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert("Voice recognition not supported on this browser");
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+
+  recognition.lang = "en-US";
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  helpCount = 0;
+  isListening = true;
+
+  document.getElementById("micBtn").classList.add("listening");
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[event.results.length - 1][0].transcript
+      .toLowerCase()
+      .trim();
+
+    console.log("Heard:", transcript);
+
+    if (transcript.includes("help")) {
+      helpCount++;
+      console.log("Help count:", helpCount);
+
+      if (helpCount >= 2) {
+        stopMic();
+        triggerSOS();
+        alert("🚨 SOS triggered by voice!");
+      }
+    }
+  };
+
+  recognition.onerror = function(e) {
+    console.error("Mic error:", e);
+    stopMic();
+  };
+
+  recognition.start();
+}
+
+function stopMic() {
+  if (recognition) recognition.stop();
+
+  isListening = false;
+  helpCount = 0;
+
+  document.getElementById("micBtn").classList.remove("listening");
+}
 
         // --- CONNECTION LOGIC ---
         function showConnectModal() {
@@ -474,9 +565,11 @@ setInterval(checkFatigue, 5000);
                     fillOpacity: 0.5,
                     radius: 20
                 }).addTo(map).bindPopup("Pothole Detected!");
+                let count = parseInt(document.getElementById('pothole-count').innerText) || 0;
+                // let count = document.getElementById('pothole-count');
+                // count.innerText = parseInt(count.innerText) + 1;
                 
-                let count = document.getElementById('pothole-count');
-                count.innerText = parseInt(count.innerText) + 1;
+
             }
         }
 function suggestLowPollutionRoute(currentLat, currentLng) {
@@ -545,7 +638,7 @@ function initVoiceSOS() {
 }
 
 // Call this after dashboard loads
-document.addEventListener('DOMContentLoaded', initVoiceSOS);
+// document.addEventListener('DOMContentLoaded', initVoiceSOS);
 
         function playBeep() {
             // Browser Audio API
