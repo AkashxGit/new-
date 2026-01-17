@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -406,6 +407,55 @@ function connectDevice(type) {
     connectWiFi();
   }
 }
+// Already have markPothole()
+// Extend to send P2P alerts via WebSocket (simulation here)
+let ws = new WebSocket('wss://yourserver.com'); // Replace with your P2P server
+
+function markPothole() {
+    if(userMarker) {
+        const currentPos = userMarker.getLatLng();
+        L.circle([currentPos.lat, currentPos.lng], {
+            color: 'red',
+            fillColor: '#f03',
+            fillOpacity: 0.5,
+            radius: 20
+        }).addTo(map).bindPopup("Pothole Detected!");
+
+        let count = document.getElementById('pothole-count');
+        count.innerText = parseInt(count.innerText) + 1;
+
+        // Send to P2P network
+        const alertData = {
+            lat: currentPos.lat,
+            lng: currentPos.lng,
+            timestamp: Date.now()
+        };
+        if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(alertData));
+    }
+}
+
+// Handle incoming alerts
+ws.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    L.circle([data.lat, data.lng], {
+        color: 'orange',
+        fillColor: '#ffa500',
+        fillOpacity: 0.3,
+        radius: 20
+    }).addTo(map).bindPopup("Nearby rider reported hazard!");
+}
+function checkFatigue() {
+    const bpm = parseInt(document.getElementById('bpm-display').innerText);
+    const drowsy = document.getElementById('drowsy-status').innerText;
+    if(!isNaN(bpm) && (bpm > 120 || drowsy === "Sleepy")) {
+        alert("Fatigue detected! Nearest rest stop / café / hospital suggested.");
+        // Example: open Google Maps nearby hospitals
+        window.open(`https://www.google.com/maps/search/hospital+near+me/`, '_blank');
+    }
+}
+
+// Call this every few seconds
+setInterval(checkFatigue, 5000);
 
         
     function setConnected(text) {
@@ -429,6 +479,31 @@ function connectDevice(type) {
                 count.innerText = parseInt(count.innerText) + 1;
             }
         }
+function suggestLowPollutionRoute(currentLat, currentLng) {
+    // Example logic: if AQI > 100, suggest nearby cleaner route
+    const aqi = parseInt(document.getElementById('aqi-display').innerText);
+    if(aqi > 100) {
+        alert("High air pollution detected! Consider taking an alternative route.");
+        // Here you could integrate Maps API routing for real implementation
+    }
+}
+
+// Call this whenever AQI updates
+function handleBLEData(event) {
+    const value = new TextDecoder().decode(event.target.value);
+    const data = Object.fromEntries(
+        value.split(',').map(v => v.split(':'))
+    );
+    document.getElementById("bpm-display").innerText = data.BPM;
+    document.getElementById("aqi-display").innerText = data.AQI;
+    document.getElementById("drowsy-status").innerText = data.SLEEP == 1 ? "Sleepy" : "Awake";
+
+    // Suggest low-pollution route
+    if(userMarker) {
+        const ll = userMarker.getLatLng();
+        suggestLowPollutionRoute(ll.lat, ll.lng);
+    }
+}
 
         function triggerDrowsinessAlert() {
             const status = document.getElementById('drowsy-status');
@@ -443,6 +518,34 @@ function connectDevice(type) {
                 status.style.color = "white";
             }, 5000);
         }
+// --- VOICE ACTIVATED SOS ---
+function initVoiceSOS() {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        console.log("Voice recognition not supported");
+        return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+        console.log("Heard:", transcript);
+        if(transcript.includes("help")) {
+            triggerSOS();
+            alert("Voice SOS triggered!");
+        }
+    }
+
+    recognition.onerror = function(e) { console.error("Voice error:", e); }
+
+    recognition.start();
+}
+
+// Call this after dashboard loads
+document.addEventListener('DOMContentLoaded', initVoiceSOS);
 
         function playBeep() {
             // Browser Audio API
